@@ -1,4 +1,4 @@
-use makemore_rust::count_frequencies;
+use alpha_makemore_rust::count_frequencies;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let filename = "names.txt";

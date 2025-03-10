@@ -3,6 +3,13 @@
 version = 4
 
 [[package]]
+name = "alpha-makemore-rust"
+version = "0.1.0"
+dependencies = [
+ "rand",
+]
+
+[[package]]
 name = "bitflags"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -31,13 +38,6 @@ name = "libc"
 version = "0.2.170"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "875b3680cb2f8f71bdcf9a30f38d48282f5d3c95cbf9b3fa57269bb5d5c06828"
-
-[[package]]
-name = "makemore-rust"
-version = "0.1.0"
-dependencies = [
- "rand",
-]
 
 [[package]]
 name = "ppv-lite86"
