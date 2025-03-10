@@ -27,12 +27,12 @@ impl Bigrams {
 
     fn increment(&mut self, token1: char, token2: char) {
         let token1_id = match self.vocabulary.has_token(token1) {
-            true => self.vocabulary.token_to_id(&token1).expect("Token not in vocabulary, but already counting frequencies."),
+            true => self.vocabulary.token_to_id(token1).expect("Token not in vocabulary, but already counting frequencies."),
             false => self.vocabulary.add_token(token1),
         };
 
         let token2_id = match self.vocabulary.has_token(token2) {
-            true => self.vocabulary.token_to_id(&token2).expect("Token not in vocabulary, but already counting frequencies."),
+            true => self.vocabulary.token_to_id(token2).expect("Token not in vocabulary, but already counting frequencies."),
             false => self.vocabulary.add_token(token2),
         };
 
@@ -46,15 +46,15 @@ impl Bigrams {
     pub fn print_bigrams(&self) {
         for (token1_id, token1_freqs) in self.frequencies.iter().enumerate() {
             for (token2_id, freq) in token1_freqs.iter().enumerate() {
-                let token1 = self.vocabulary.id_to_token(&token1_id).expect("Token ID out of bounds.");
-                let token2 = self.vocabulary.id_to_token(&token2_id).expect("Token ID out of bounds.");
+                let token1 = self.vocabulary.id_to_token(token1_id).expect("Token ID out of bounds.");
+                let token2 = self.vocabulary.id_to_token(token2_id).expect("Token ID out of bounds.");
                 print!("{:1}{:1}: {:4} | ", token1, token2, freq);
             }
             println!("")
         }
     }
 
-    fn sample_next_token(&mut self, token: &char) -> char {
+    fn sample_next_token(&mut self, token: char) -> char {
         let token_id = self.vocabulary.token_to_id(token).expect("Token not in vocabulary.");
 
         let token_freqs = &self.frequencies[token_id];
@@ -66,7 +66,7 @@ impl Bigrams {
             random_freq -= freq;
 
             if random_freq <= 0 {
-                return self.vocabulary.id_to_token(&next_token_id).expect("Token ID out of bounds.");
+                return self.vocabulary.id_to_token(next_token_id).expect("Token ID out of bounds.");
             }
         }
 
@@ -79,7 +79,7 @@ impl Bigrams {
         let mut last_token = TOKEN_START;
     
         loop {
-            let next_token = self.sample_next_token(&last_token);
+            let next_token = self.sample_next_token(last_token);
     
             if next_token == TOKEN_END {
                 break;

@@ -20,12 +20,12 @@ impl Vocabulary {
         self.s_to_i.contains_key(&token)
     }
 
-    pub fn token_to_id(&self, token: &char) -> Option<usize> {
-        self.s_to_i.get(token).copied()
+    pub fn token_to_id(&self, token: char) -> Option<usize> {
+        self.s_to_i.get(&token).copied()
     }
 
-    pub fn id_to_token(&self, id: &usize) -> Option<char> {
-        self.i_to_s.get(id).copied()
+    pub fn id_to_token(&self, id: usize) -> Option<char> {
+        self.i_to_s.get(&id).copied()
     }
 
     pub fn add_token(&mut self, token: char) -> usize {
