@@ -9,7 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\nGenerated names:");
 
-    for _ in 0..10 {
+    for _ in 0..20 {
         let new_text = bigrams.generate_new_text();
         println!("{}", new_text);
     }

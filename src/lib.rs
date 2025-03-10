@@ -6,9 +6,11 @@ mod file_reader;
 mod vocabulary;
 
 use file_reader::get_line_reader;
+use rand::distr::weighted::WeightedIndex;
+use rand::distr::Distribution;
 use vocabulary::Vocabulary;
 
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{rngs::StdRng, SeedableRng};
 
 pub struct Bigrams {
     frequencies: Vec<Vec<i32>>,
@@ -59,18 +61,10 @@ impl Bigrams {
 
         let token_freqs = &self.frequencies[token_id];
 
-        let total_freqs: i32 = token_freqs.iter().sum();
-        let mut random_freq = self.rng.random_range(0..=total_freqs);
+        let wi = WeightedIndex::new(token_freqs.iter()).expect("No non-zero frequencies.");
+        let next_token_id = wi.sample(&mut self.rng);
 
-        for (next_token_id, freq) in token_freqs.iter().enumerate() {
-            random_freq -= freq;
-
-            if random_freq <= 0 {
-                return self.vocabulary.id_to_token(next_token_id).expect("Token ID out of bounds.");
-            }
-        }
-
-        panic!("No token sampled.");
+        return self.vocabulary.id_to_token(next_token_id).expect("Sampled token ID out of bounds.");
     }
 
     pub fn generate_new_text(&mut self) -> String {
