@@ -3,9 +3,11 @@ use alpha_makemore_rust::vocabulary::Vocabulary;
 use alpha_makemore_rust::{TOKEN_END, TOKEN_START};
 use alpha_micrograd_rust::value::Expr;
 use clap::Parser;
+use indicatif::{ProgressBar, ProgressStyle};
 use rand::{distr::Uniform, prelude::Distribution, rng};
 use std::error::Error;
 use std::iter::once;
+use std::time::Duration;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -13,75 +15,93 @@ struct Arguments {
     #[arg(short, long, default_value = "names.txt")]
     filename: String,
 
-    #[arg(short, long, default_value = "100")]
+    #[arg(short, long, default_value = "10000")]
     epochs: usize,
 
     #[arg(short, long, default_value = "0.1")]
     learning_rate: f64,
 
-    #[arg(short, long, default_value = "1000")]
+    #[arg(short, long, default_value = "5000")]
     max_examples: Option<usize>,
+}
+
+fn execute_with_progress<F, O>(msg: &str, f: F) -> O
+where F: FnOnce() -> O {
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(Duration::from_millis(100));
+    pb.set_message(msg.to_string());
+    let result = f();
+
+    pb.finish_with_message(format!("{} Done.", msg));
+    result
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Arguments::parse();
 
-    print!("Generating vocabulary... ");
-    let (xs, ys, vocabulary) = generate_dataset(&args.filename)?;
-    println!("Done.");
+    let (xs, ys, vocabulary) = execute_with_progress("Generating vocabulary...", || {
+        std::thread::sleep(Duration::from_secs(1));
+        generate_dataset(&args.filename)
+    })?;
 
-    print!("One-hot encoding... ");
     let vocab_size = vocabulary.len();
-    let mut xenc = one_hot_encode(&xs, vocab_size);
-    if let Some(max_examples) = args.max_examples {
-        xenc.truncate(max_examples);
-    }
-    println!("Done.");
+    let xenc = execute_with_progress("One-hot encoding...", || {
+        let mut x_1he = one_hot_encode(&xs, vocab_size);
+        if let Some(max_examples) = args.max_examples {
+            x_1he.truncate(max_examples);
+        }
+        x_1he
+    });
 
-    let between = Uniform::new_inclusive(-1.0, 1.0)?;
-    let mut rng = rng();
+    let w = execute_with_progress("Initializing weights...", || {
+        let between = Uniform::new_inclusive(-1.0, 1.0).expect("Invalid range");
+        let mut rng = rng();
 
-    print!("Initializing weights... ");
-    let w = (0..vocab_size)
-        .map(|_| between.sample(&mut rng))
-        .enumerate()
-        .map(|(i, v)| Expr::new_leaf(v, &format!("w_{}", i)))
-        .collect::<Vec<_>>()
-        .into_iter()
-        .map(|v| vec![v])
-        .collect::<Vec<_>>();
-    println!("Done.");
+        (0..vocab_size)
+            .map(|_| between.sample(&mut rng))
+            .enumerate()
+            .map(|(i, v)| Expr::new_leaf(v, &format!("w_{}", i)))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|v| vec![v])
+            .collect::<Vec<_>>()
+    });
 
-    print!("Matrix multiplication... ");
-    let logits = mat_mul(&xenc, &w);
-    println!("Done.");
+    let logits = execute_with_progress("Calculating logits...",  || {
+        mat_mul(&xenc, &w)
+    });
 
-    print!("Softmax... ");
-    let probs = softmax(&logits);
-    println!("Done.");
+    let probs = execute_with_progress("Calculating softmax...",  || {
+        softmax(&logits)
+    });
 
-    dbg!(probs.len(), probs[0].len());
+    let mut average_nll = execute_with_progress("Calculating Average NLL...", || {
+        let mut average_nll: Expr = Expr::new_leaf(0.0, "average_nll");
+        for i in 0..xenc.len() {
+            let y = ys[i].clone();
+            let p = &probs[i][y];
+            let log_likelihood = p.clone().log(&format!("log_likelihood_{}", i));
+            let nll = log_likelihood.clone().neg(&format!("loss_{}", i));
+            average_nll = average_nll + nll;
+        }
+        average_nll = average_nll / xenc.len() as f64;
+        average_nll
+    });
 
-    print!("Calculating Average NLL... ");
-    let mut average_nll: Expr = Expr::new_leaf(0.0, "average_nll");
-    for i in 0..xenc.len() {
-        let y = ys[i].clone();
-        let p = &probs[i][y];
-        let log_likelihood = p.clone().log(&format!("log_likelihood_{}", i));
-        let nll = log_likelihood.clone().neg(&format!("loss_{}", i));
-        average_nll = average_nll + nll;
-    }
-    average_nll = average_nll / xenc.len() as f64;
-    dbg!(&average_nll.result);
-    println!("Done.");
-
-    print!("Training... ");
-    for epoch in 0..args.epochs {
+    let pb = ProgressBar::new(args.epochs as u64);
+    pb.set_style(
+        ProgressStyle
+            ::with_template("{elapsed_precise}/{duration_precise} | {wide_bar} {percent}% | Epoch: {human_pos}/{human_len} | {msg} ")
+            .expect("Invalid template")
+    );
+    pb.set_message("Training...");
+    pb.enable_steady_tick(Duration::from_millis(100));
+    for _ in 0..args.epochs {
         average_nll.learn(args.learning_rate);
         average_nll.recalculate();
-        dbg!(epoch, &average_nll.result);
+        pb.inc(1);
+        pb.set_message(format!("Loss (NLL): {:.4}", average_nll.result));
     }
-    println!("Done.");
 
     Ok(())
 }
