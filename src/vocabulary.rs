@@ -36,4 +36,8 @@ impl Vocabulary {
         self.i_to_s.insert(*id, token);
         *id
     }
+
+    pub fn len(&self) -> usize {
+        self.next_id
+    }
 }
