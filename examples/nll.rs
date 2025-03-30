@@ -91,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pb = ProgressBar::new(args.epochs as u64);
     pb.set_style(
         ProgressStyle
-            ::with_template("{elapsed_precise}/{duration_precise} | {wide_bar} {percent}% | Epoch: {human_pos}/{human_len} | {msg} ")
+            ::with_template("{elapsed_precise}/{duration_precise} | {per_sec} | {wide_bar} {percent}% | Epoch: {human_pos}/{human_len} | {msg} ")
             .expect("Invalid template")
     );
     pb.set_message("Training...");
