@@ -5,4 +5,4 @@ const VOCAB_SIZE: usize = 27;
 pub mod file_reader;
 pub mod vocabulary;
 pub mod bigrams;
-
+pub mod nll;
